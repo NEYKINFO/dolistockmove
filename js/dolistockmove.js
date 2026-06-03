@@ -63,6 +63,19 @@
 		});
 	}
 
+	/**
+	 * Position a fixed dropdown below an input field.
+	 * Uses fixed positioning to escape table overflow:hidden constraints.
+	 */
+	function positionDropdown($input, $dropdown) {
+		var offset = $input.offset();
+		$dropdown.css({
+			top:   (offset.top + $input.outerHeight()) + 'px',
+			left:  offset.left + 'px',
+			width: Math.max($input.outerWidth(), 280) + 'px',
+		});
+	}
+
 	// ================================================================
 	// Proposal autocomplete
 	// ================================================================
@@ -96,8 +109,7 @@
 								$results.hide().empty();
 							});
 							$results.append($item);
-						});
-						$results.show();
+						});					positionDropdown($input, $results);						$results.show();
 					});
 			}, 280);
 		});
@@ -136,16 +148,17 @@
 							var $item = $('<div class="dsm-ac-item">').html(
 								'<span class="dsm-ac-ref">' + escHtml(item.ref) + '</span>'
 								+ '<span class="dsm-ac-label">' + escHtml(item.label) + '</span>'
-								+ '<span class="dsm-ac-stock">Stock : ' + parseFloat(item.stock).toFixed(2) + '</span>'
-							);
-							$item.on('click', function () {
-								$input.val(item.value);
-								$hidden.val(item.id);
-								$results.hide().empty();
-								updateStockBadge($row, item.id);
-							});
-							$results.append($item);
+							+ '<span class="dsm-ac-stock">Stock : ' + parseFloat(item.stock).toFixed(2) + '</span>'
+						);
+						$item.on('click', function () {
+							$input.val(item.value);
+							$hidden.val(item.id);
+							$results.hide().empty();
+							updateStockBadge($row, item.id);
 						});
+						$results.append($item);
+					});
+					positionDropdown($input, $results);
 						$results.show();
 					});
 			}, 280);
@@ -393,6 +406,16 @@
 		$('#dolistockmove_lines_body .dolistockmove-line').each(function () {
 			initProductAutocomplete($(this));
 		});
+
+		// Pre-fill first line if coming from a product card
+		if (cfg.prefillProductId > 0 && cfg.prefillProductRef) {
+			var $firstRow = $('#dolistockmove_lines_body .dolistockmove-line').first();
+			if ($firstRow.length) {
+				$firstRow.find('.dsm-product-id').val(cfg.prefillProductId);
+				$firstRow.find('.dsm-product-search').val(cfg.prefillProductRef);
+				updateStockBadge($firstRow, cfg.prefillProductId);
+			}
+		}
 
 		initWarehouseChange();
 		initAddLine();

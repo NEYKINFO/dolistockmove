@@ -40,11 +40,13 @@ $langs->loadLangs(array('dolistockmove@dolistockmove', 'stocks', 'products', 'pr
 if (!isModEnabled('dolistockmove')) { accessforbidden(); }
 if (!$user->hasRight('stock', 'mouvement', 'creer')) { accessforbidden(); }
 
-$action       = GETPOST('action', 'aZ09');
-$fk_proposal  = GETPOSTINT('fk_proposal');
-$fk_entrepot  = GETPOSTINT('fk_entrepot');
-$datem        = GETPOST('datem', 'alpha');
-$global_label = GETPOST('global_label', 'alphanohtml');
+$action           = GETPOST('action', 'aZ09');
+$fk_proposal      = GETPOSTINT('fk_proposal');
+$fk_entrepot      = GETPOSTINT('fk_entrepot');
+$datem            = GETPOST('datem', 'alpha');
+$global_label     = GETPOST('global_label', 'alphanohtml');
+$prefill_product_id  = GETPOSTINT('prefill_product_id');
+$prefill_product_ref = GETPOST('prefill_product_ref', 'alphanohtml');
 
 // Default warehouse from config
 if (empty($fk_entrepot)) {
@@ -212,9 +214,6 @@ if (!empty($messages)) {
 	setEventMessages(implode('<br>', $messages), null, 'mesgs');
 }
 
-// Build warehouses list
-$warehouses = dolistockmoveGetWarehouses($db);
-
 // Opening form
 print '<form id="dolistockmove_form" method="POST" action="'.$_SERVER['PHP_SELF'].'">';
 print '<input type="hidden" name="token" value="'.newToken().'">';
@@ -254,7 +253,7 @@ print '</td></tr>';
 print '<tr>';
 print '<td class="titlefieldcreate fieldrequired">'.$langs->trans('SelectWarehouse').'</td>';
 print '<td>';
-print Form::selectarray('fk_entrepot', $warehouses, $fk_entrepot, 1, 0, 0, '', 0, 0, 0, 'ASC', 'minwidth200', 1);
+print $form->select_entrepots($fk_entrepot, 'fk_entrepot', '', 1, 0, 'minwidth200 select2bs4');
 print '</td></tr>';
 
 // Date
@@ -367,10 +366,11 @@ print '  createUrl: "'.dol_buildpath('/dolistockmove/ajax/create_product.php', 1
 print '  propalUrl: "'.dol_buildpath('/dolistockmove/ajax/product_info.php', 1).'",';
 print '  token: "'.currentToken().'",';
 print '  fk_entrepot: '.(int) $fk_entrepot.',';
+print '  prefillProductId: '.(int) $prefill_product_id.',';
+print '  prefillProductRef: "'.dol_escape_js($prefill_product_ref).'",';
 print '  lblSortie: "'.dol_escape_js($langs->trans('Sortie')).'",';
 print '  lblRetour: "'.dol_escape_js($langs->trans('Retour')).'",';
 print '  lblCurrentStock: "'.dol_escape_js($langs->trans('CurrentStock')).'",';
-print '  lblSearchProduct: "'.dol_escape_js($langs->trans('SearchProduct')).'",';
 print '};';
 print '</script>';
 
@@ -393,7 +393,7 @@ function dolistockmove_render_line($idx)
 	$html .= '<td>';
 	$html .= '<input type="hidden" name="product_id[]" class="dsm-product-id" value="">';
 	$html .= '<input type="text" class="dsm-product-search form-control"';
-	$html .= ' placeholder="'.dol_escape_htmltag($langs->trans('SearchProduct')).'"';
+	$html .= ' placeholder="'.dol_escape_htmltag($langs->trans('TypeToSearch')).'"';
 	$html .= ' autocomplete="off">';
 	$html .= '<div class="dolistockmove-autocomplete-list dsm-product-results" style="display:none;"></div>';
 	$html .= '</td>';

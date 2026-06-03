@@ -5,7 +5,7 @@
 
 /* ---- Search autocomplete dropdown ---- */
 .dolistockmove-autocomplete-list {
-	position: absolute;
+	position: fixed;
 	z-index: 9999;
 	background: var(--colorbackbody, #fff);
 	border: 1px solid var(--colortext, #ccc);
@@ -13,7 +13,6 @@
 	border-radius: 0 0 4px 4px;
 	max-height: 260px;
 	overflow-y: auto;
-	width: 100%;
 	min-width: 280px;
 	box-shadow: 0 4px 8px rgba(0,0,0,0.12);
 }
@@ -62,9 +61,9 @@
 	padding: 6px 8px !important;
 }
 
-/* Position relative on product cell for autocomplete dropdown */
+/* Position relative no longer needed — dropdown is fixed-positioned via JS */
 .dolistockmove-line td:first-child {
-	position: relative;
+	vertical-align: top;
 }
 
 /* Stock badge */

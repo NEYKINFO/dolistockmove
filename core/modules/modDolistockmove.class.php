@@ -107,7 +107,8 @@ class modDolistockmove extends DolibarrModules
 
 		// Add a tab on the Proposal (devis) card showing linked stock movements
 		$this->tabs = array(
-			'propal:+dolistockmove:StockMovements:dolistockmove@dolistockmove:$user->hasRight("stock","lire"):/dolistockmove/propal_stockmovements.php?id=__ID__',
+			'propal:+dolistockmove_moves:StockMovements:dolistockmove@dolistockmove:$user->hasRight("stock","lire"):/dolistockmove/propal_stockmovements.php?id=__ID__',
+			'product:+dolistockmove_moves:StockMovements:dolistockmove@dolistockmove:$user->hasRight("stock","lire"):/dolistockmove/product_stockmovements.php?id=__ID__',
 		);
 
 		$this->dictionaries = array();

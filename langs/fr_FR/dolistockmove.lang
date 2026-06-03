@@ -76,6 +76,11 @@ TotalSortie=Total sorti
 TotalRetour=Total retourné
 NetQty=Qté nette
 
+# Product tab
+NoMovementsForProduct=Aucun mouvement de stock enregistré pour ce produit.
+SummaryByProposal=Récapitulatif par proposition
+NoProposal=Sans proposition
+
 # Index
 DolistockmoveIndex=DoliStockMove — Accueil
 WelcomeDolistockmove=Bienvenue dans DoliStockMove

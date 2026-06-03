@@ -76,6 +76,11 @@ TotalSortie=Total exited
 TotalRetour=Total returned
 NetQty=Net qty
 
+# Product tab
+NoMovementsForProduct=No stock movements recorded for this product.
+SummaryByProposal=Summary by proposal
+NoProposal=No linked proposal
+
 # Index
 DolistockmoveIndex=DoliStockMove — Home
 WelcomeDolistockmove=Welcome to DoliStockMove
