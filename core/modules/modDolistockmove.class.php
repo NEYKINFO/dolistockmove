@@ -85,7 +85,7 @@ class modDolistockmove extends DolibarrModules
 		$this->config_page_url = array('setup.php@dolistockmove');
 
 		$this->hidden = false;
-		$this->depends    = array('modStock', 'modPropal');
+		$this->depends    = array();
 		$this->requiredby = array();
 		$this->conflictwith = array();
 
