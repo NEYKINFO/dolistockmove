@@ -87,7 +87,7 @@ print '</tr>';
 
 // Default warehouse
 $warehouses = array(0 => '-- '.$langs->trans('None').' --');
-$sql = 'SELECT rowid, ref, label FROM '.MAIN_DB_PREFIX.'entrepot WHERE statut = 1 ORDER BY label';
+$sql = 'SELECT rowid, ref, label FROM '.MAIN_DB_PREFIX.'entrepot WHERE entity IN ('.getEntity('stock').') ORDER BY label';
 $resql = $db->query($sql);
 if ($resql) {
 	while ($obj = $db->fetch_object($resql)) {

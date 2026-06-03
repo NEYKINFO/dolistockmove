@@ -32,6 +32,7 @@ require_once DOL_DOCUMENT_ROOT.'/product/stock/class/mouvementstock.class.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
 dol_include_once('/dolistockmove/lib/dolistockmove.lib.php');
 
 $langs->loadLangs(array('dolistockmove@dolistockmove', 'stocks', 'products', 'propal'));
@@ -53,7 +54,8 @@ if (empty($fk_entrepot)) {
 	$fk_entrepot = getDolGlobalInt('DOLISTOCKMOVE_DEFAULT_WAREHOUSE');
 }
 
-$form = new Form($db);
+$form        = new Form($db);
+$formproduct = new FormProduct($db);
 
 $errors   = array();
 $messages = array();
@@ -253,7 +255,7 @@ print '</td></tr>';
 print '<tr>';
 print '<td class="titlefieldcreate fieldrequired">'.$langs->trans('SelectWarehouse').'</td>';
 print '<td>';
-print $form->select_entrepots($fk_entrepot, 'fk_entrepot', '', 1, 0, 'minwidth200 select2bs4');
+print $formproduct->selectWarehouses($fk_entrepot, 'fk_entrepot', '', 1, 1, 0, '', 0, 0, 'minwidth200');
 print '</td></tr>';
 
 // Date

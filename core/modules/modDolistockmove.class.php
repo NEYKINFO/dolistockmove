@@ -108,7 +108,6 @@ class modDolistockmove extends DolibarrModules
 		// Add a tab on the Proposal (devis) card showing linked stock movements
 		$this->tabs = array(
 			'propal:+dolistockmove_moves:StockMovements:dolistockmove@dolistockmove:$user->hasRight("stock","lire"):/dolistockmove/propal_stockmovements.php?id=__ID__',
-			'product:+dolistockmove_moves:StockMovements:dolistockmove@dolistockmove:$user->hasRight("stock","lire"):/dolistockmove/product_stockmovements.php?id=__ID__',
 		);
 
 		$this->dictionaries = array();
@@ -171,6 +170,23 @@ class modDolistockmove extends DolibarrModules
 			'position' => 1000 + $r,
 			'enabled'  => 'isModEnabled("dolistockmove")',
 			'perms'    => '$user->hasRight("stock","lire")',
+			'target'   => '',
+			'user'     => 2,
+		);
+
+		// Entry in Products/Services main menu
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=products',
+			'type'     => 'left',
+			'titre'    => 'NewStockMove',
+			'prefix'   => img_picto('', 'fa-dolly', 'class="paddingright pictofixedwidth valignmiddle"'),
+			'mainmenu' => 'products',
+			'leftmenu' => 'dolistockmove_newmove',
+			'url'      => '/dolistockmove/stockmove_card.php',
+			'langs'    => 'dolistockmove@dolistockmove',
+			'position' => 500,
+			'enabled'  => 'isModEnabled("dolistockmove")',
+			'perms'    => '$user->hasRight("stock","mouvement","creer")',
 			'target'   => '',
 			'user'     => 2,
 		);
