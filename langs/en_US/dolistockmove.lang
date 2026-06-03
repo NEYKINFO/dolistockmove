@@ -1,0 +1,82 @@
+# English
+DolistockmoveDescription=Fast stock movement entry linked to commercial proposals
+DolistockmoveDescriptionLong=Allows entering stock exits/returns for multiple products at once, linked to a commercial proposal, with a mobile/tablet-optimised interface.
+
+# Module name
+ModuleDolistockmoveName=DoliStockMove
+ModuleDolistockmoveDesc=Fast stock movement entry linked to quotes
+
+# Menu
+DoliStockMove=DoliStockMove
+NewStockMove=New movement
+StockMoveList=Movement list
+StockMovements=Stock movements
+
+# Setup
+DolistockmoveSetup=DoliStockMove Settings
+DefaultWarehouse=Default warehouse
+DefaultWarehouseDesc=Warehouse pre-selected in the entry form
+AllowNoProposal=Allow movements without proposal
+AllowNoProposalDesc=If enabled, the "Commercial proposal" field is optional
+
+# Card / form labels
+StockMoveForm=Stock movement entry
+ProposalCommerciale=Commercial proposal
+SelectProposal=Select a proposal
+SelectWarehouse=Select warehouse
+MoveDate=Movement date
+GlobalComment=General comment
+ProductLines=Product lines
+Product=Product
+CurrentStock=Current stock
+MoveType=Type
+Sortie=Exit
+Retour=Return (entry)
+Qty=Quantity
+LineComment=Line comment
+AddLine=Add a line
+CreateProduct=Create product
+ValidateMoves=Validate movements
+NoLinesError=You must enter at least one product line.
+NoProductError=Please select a product on each line.
+NoQtyError=Quantity must be greater than 0.
+MovementsCreated=Stock movement(s) successfully recorded.
+MovementError=Error creating movement for product %s.
+
+# Quick product creation modal
+QuickCreateProduct=Quick product creation
+ProductRef=Product reference
+ProductLabel=Product label
+ProductDesc=Description
+CreateAndSelect=Create and select
+ProductCreated=Product successfully created.
+ProductCreateError=Error creating product.
+
+# List
+MovesList=Stock movement list (DoliStockMove)
+FilterByProposal=Filter by proposal
+FilterByProduct=Filter by product
+FilterDateFrom=From
+FilterDateTo=To
+MoveDirection=Direction
+Date=Date
+User=User
+Warehouse=Warehouse
+LinkedProposal=Linked proposal
+NoMovementsFound=No movements found.
+DeleteMove=Delete this movement
+ConfirmDeleteMove=Are you sure you want to delete this stock movement?
+MoveDeleted=Movement deleted.
+
+# Proposal tab
+ProposalStockMovements=Stock movements linked to this proposal
+NoMovementsForProposal=No stock movements recorded for this proposal.
+GoToNewMove=Record movements for this quote
+TotalSortie=Total exited
+TotalRetour=Total returned
+NetQty=Net qty
+
+# Index
+DolistockmoveIndex=DoliStockMove — Home
+WelcomeDolistockmove=Welcome to DoliStockMove
+DolistockmoveDesc=Record your material exits quickly, linked to your commercial proposals.

@@ -1,0 +1,82 @@
+# French
+DolistockmoveDescription=Saisie rapide de mouvements de stock liés aux propositions commerciales
+DolistockmoveDescriptionLong=Permet de saisir des sorties/retours de matériel sur plusieurs produits à la fois, liés à une proposition commerciale (devis), depuis une interface optimisée mobile/tablette.
+
+# Module name
+ModuleDolistockmoveName=DoliStockMove
+ModuleDolistockmoveDesc=Saisie rapide de mouvements de stock liés aux devis
+
+# Menu
+DoliStockMove=DoliStockMove
+NewStockMove=Nouveau mouvement
+StockMoveList=Liste des mouvements
+StockMovements=Mouvements de stock
+
+# Setup
+DolistockmoveSetup=Configuration DoliStockMove
+DefaultWarehouse=Entrepôt par défaut
+DefaultWarehouseDesc=Entrepôt pré-sélectionné dans le formulaire de saisie
+AllowNoProposal=Autoriser les mouvements sans devis
+AllowNoProposalDesc=Si activé, le champ "Proposition commerciale" est optionnel
+
+# Card / form labels
+StockMoveForm=Saisie de mouvements de stock
+ProposalCommerciale=Proposition commerciale
+SelectProposal=Sélectionner une proposition
+SelectWarehouse=Sélectionner l'entrepôt
+MoveDate=Date du mouvement
+GlobalComment=Commentaire général
+ProductLines=Lignes de produits
+Product=Produit
+CurrentStock=Stock actuel
+MoveType=Type
+Sortie=Sortie
+Retour=Retour (entrée)
+Qty=Quantité
+LineComment=Commentaire ligne
+AddLine=Ajouter une ligne
+CreateProduct=Créer un produit
+ValidateMoves=Valider les mouvements
+NoLinesError=Vous devez saisir au moins une ligne de produit.
+NoProductError=Veuillez sélectionner un produit sur chaque ligne.
+NoQtyError=La quantité doit être supérieure à 0.
+MovementsCreated=Mouvement(s) de stock enregistré(s) avec succès.
+MovementError=Erreur lors de la création du mouvement pour le produit %s.
+
+# Quick product creation modal
+QuickCreateProduct=Création rapide d'un produit
+ProductRef=Référence produit
+ProductLabel=Libellé produit
+ProductDesc=Description
+CreateAndSelect=Créer et sélectionner
+ProductCreated=Produit créé avec succès.
+ProductCreateError=Erreur lors de la création du produit.
+
+# List
+MovesList=Liste des mouvements de stock (DoliStockMove)
+FilterByProposal=Filtrer par proposition
+FilterByProduct=Filtrer par produit
+FilterDateFrom=Du
+FilterDateTo=Au
+MoveDirection=Direction
+Date=Date
+User=Utilisateur
+Warehouse=Entrepôt
+LinkedProposal=Proposition liée
+NoMovementsFound=Aucun mouvement trouvé.
+DeleteMove=Supprimer ce mouvement
+ConfirmDeleteMove=Êtes-vous sûr de vouloir supprimer ce mouvement de stock ?
+MoveDeleted=Mouvement supprimé.
+
+# Proposal tab
+ProposalStockMovements=Mouvements de stock liés à cette proposition
+NoMovementsForProposal=Aucun mouvement de stock enregistré pour cette proposition.
+GoToNewMove=Saisir des mouvements pour ce devis
+TotalSortie=Total sorti
+TotalRetour=Total retourné
+NetQty=Qté nette
+
+# Index
+DolistockmoveIndex=DoliStockMove — Accueil
+WelcomeDolistockmove=Bienvenue dans DoliStockMove
+DolistockmoveDesc=Saisissez vos sorties de matériel rapidement, liées à vos propositions commerciales.

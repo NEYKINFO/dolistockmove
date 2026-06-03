@@ -1,0 +1,287 @@
+/* ==========================================================================
+   DoliStockMove — CSS
+   Mobile-first, responsive. Works on Dolibarr Bootstrap 4/5 theme.
+   ========================================================================== */
+
+/* ---- Search autocomplete dropdown ---- */
+.dolistockmove-autocomplete-list {
+	position: absolute;
+	z-index: 9999;
+	background: var(--colorbackbody, #fff);
+	border: 1px solid var(--colortext, #ccc);
+	border-top: none;
+	border-radius: 0 0 4px 4px;
+	max-height: 260px;
+	overflow-y: auto;
+	width: 100%;
+	min-width: 280px;
+	box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	border-bottom: 1px solid var(--colortext, #eee);
+	font-size: 0.92em;
+	display: flex;
+	flex-direction: column;
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-item:last-child {
+	border-bottom: none;
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-item:hover,
+.dolistockmove-autocomplete-list .dsm-ac-item.active {
+	background: var(--colorbackaction, #e8f4ff);
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-ref {
+	font-weight: 700;
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-label {
+	color: var(--colortext, #555);
+	font-size: 0.88em;
+}
+
+.dolistockmove-autocomplete-list .dsm-ac-stock {
+	font-size: 0.82em;
+	color: var(--colortexttitle, #999);
+	margin-top: 2px;
+}
+
+/* ---- Lines table ---- */
+.dolistockmove-lines-table {
+	border-collapse: collapse;
+}
+
+.dolistockmove-lines-table td,
+.dolistockmove-lines-table th {
+	vertical-align: middle !important;
+	padding: 6px 8px !important;
+}
+
+/* Position relative on product cell for autocomplete dropdown */
+.dolistockmove-line td:first-child {
+	position: relative;
+}
+
+/* Stock badge */
+.dsm-stock-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 4px;
+	font-size: 0.85em;
+	font-weight: 700;
+	background: var(--colorbackbody, #f5f5f5);
+	color: var(--colortext, #333);
+	border: 1px solid var(--colortext, #ccc);
+}
+
+.dsm-stock-badge.stock-ok   { background: #d4edda; color: #155724; border-color: #c3e6cb; }
+.dsm-stock-badge.stock-low  { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.dsm-stock-badge.stock-zero { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+
+/* ---- Remove line button ---- */
+.dsm-remove-line {
+	background: none;
+	border: none;
+	color: var(--colorwarning, #dc3545);
+	cursor: pointer;
+	padding: 4px 8px;
+	font-size: 1.1em;
+	border-radius: 4px;
+	transition: background 0.15s;
+}
+
+.dsm-remove-line:hover {
+	background: rgba(220, 53, 69, 0.1);
+}
+
+/* ---- Table actions row ---- */
+.dolistockmove-table-actions {
+	margin-top: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* ---- Search bar on list page ---- */
+.dolistockmove-search-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 16px;
+	padding: 10px;
+	background: var(--colorbackbody, #f8f9fa);
+	border: 1px solid var(--colortext, #dee2e6);
+	border-radius: 4px;
+}
+
+.dolistockmove-search-bar input[type=text],
+.dolistockmove-search-bar input[type=date] {
+	min-width: 150px;
+}
+
+.dolistockmove-search-bar label {
+	margin: 0;
+	font-weight: 600;
+	font-size: 0.9em;
+	white-space: nowrap;
+}
+
+/* ---- Modal overlay ---- */
+.dolistockmove-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.55);
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+}
+
+.dolistockmove-modal {
+	background: var(--colorbackbody, #fff);
+	border-radius: 8px;
+	box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+	width: 100%;
+	max-width: 520px;
+	animation: dsmModalIn 0.18s ease;
+}
+
+@keyframes dsmModalIn {
+	from { transform: translateY(-20px); opacity: 0; }
+	to   { transform: translateY(0); opacity: 1; }
+}
+
+.dolistockmove-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 14px 18px;
+	border-bottom: 1px solid var(--colortext, #dee2e6);
+}
+
+.dolistockmove-modal-header h4 {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 700;
+}
+
+.dolistockmove-modal-close {
+	background: none;
+	border: none;
+	font-size: 1.5em;
+	cursor: pointer;
+	line-height: 1;
+	color: var(--colortext, #666);
+	padding: 0 4px;
+}
+
+.dolistockmove-modal-body {
+	padding: 18px;
+}
+
+.dolistockmove-modal-footer {
+	padding: 12px 18px;
+	border-top: 1px solid var(--colortext, #dee2e6);
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+/* ---- Responsive: mobile / tablet ---- */
+@media (max-width: 768px) {
+	/* Stack form fields vertically */
+	.tableforfield td,
+	.tableforfield th {
+		display: block;
+		width: 100% !important;
+	}
+
+	.tableforfield tr {
+		display: block;
+		margin-bottom: 10px;
+	}
+
+	.tableforfield .titlefieldcreate {
+		font-weight: 700;
+		padding-bottom: 2px !important;
+	}
+
+	/* Make lines table horizontally scrollable */
+	.dolistockmove-lines-container .table-responsive {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	/* Larger touch targets */
+	.dsm-qty {
+		font-size: 1.1em !important;
+		padding: 8px !important;
+	}
+
+	.dsm-type {
+		font-size: 1em !important;
+	}
+
+	/* Bigger action buttons */
+	.dolistockmove-table-actions .button {
+		padding: 10px 18px;
+		font-size: 1em;
+		min-height: 44px;
+	}
+
+	/* Submit button */
+	.center .button.btn-lg {
+		width: 100%;
+		max-width: 360px;
+		padding: 12px;
+		font-size: 1.1em;
+		min-height: 48px;
+	}
+
+	/* Remove line button larger */
+	.dsm-remove-line {
+		min-width: 36px;
+		min-height: 36px;
+	}
+
+	/* Search bar stacked */
+	.dolistockmove-search-bar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.dolistockmove-search-bar input {
+		width: 100% !important;
+	}
+
+	/* Modal fills screen on mobile */
+	.dolistockmove-modal-overlay {
+		align-items: flex-end;
+		padding: 0;
+	}
+
+	.dolistockmove-modal {
+		max-width: 100%;
+		border-radius: 12px 12px 0 0;
+	}
+}
+
+/* ---- Print styles ---- */
+@media print {
+	.dolistockmove-table-actions,
+	.dolistockmove-search-bar,
+	.button,
+	.dsm-remove-line {
+		display: none !important;
+	}
+}
