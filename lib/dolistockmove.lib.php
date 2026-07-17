@@ -56,14 +56,21 @@ function dolistockmoveGetWarehouses($db, $selected = 0, $addempty = false)
 		$warehouses[0] = '';
 	}
 
-	$sql = "SELECT rowid, ref, label FROM ".MAIN_DB_PREFIX."entrepot";
+	$sql = "SELECT rowid, ref, description, lieu FROM ".MAIN_DB_PREFIX."entrepot";
 	$sql .= " WHERE statut = 1";
-	$sql .= " ORDER BY label";
+	$sql .= " AND entity IN (".getEntity('stock').")";
+	$sql .= " ORDER BY ref";
 
 	$resql = $db->query($sql);
 	if ($resql) {
 		while ($obj = $db->fetch_object($resql)) {
-			$warehouses[$obj->rowid] = $obj->ref.($obj->label ? ' - '.$obj->label : '');
+			$label = $obj->ref;
+			if (!empty($obj->lieu)) {
+				$label .= ' - '.$obj->lieu;
+			} elseif (!empty($obj->description)) {
+				$label .= ' - '.$obj->description;
+			}
+			$warehouses[$obj->rowid] = $label;
 		}
 		$db->free($resql);
 	}

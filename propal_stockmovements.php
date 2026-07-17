@@ -85,17 +85,17 @@ if ($user->hasRight('stock', 'mouvement', 'creer')) {
 }
 
 // ---- Query movements for this proposal ----
-$sql  = "SELECT m.rowid, m.datem, m.label, m.qty, m.type, m.fk_product,";
+$sql  = "SELECT m.rowid, m.datem, m.label, m.value, m.type_mouvement, m.fk_product,";
 $sql .= " p.ref as product_ref, p.label as product_label,";
 $sql .= " e.ref as entrepot_ref,";
 $sql .= " u.login as user_login, u.firstname, u.lastname";
-$sql .= " FROM ".MAIN_DB_PREFIX."mouvement_stock m";
-$sql .= " INNER JOIN ".MAIN_DB_PREFIX."mouvement_stock_extrafields mef ON mef.fk_object = m.rowid";
+$sql .= " FROM ".MAIN_DB_PREFIX."stock_mouvement m";
+$sql .= " INNER JOIN ".MAIN_DB_PREFIX."stock_mouvement_extrafields mef ON mef.fk_object = m.rowid";
 $sql .= " INNER JOIN ".MAIN_DB_PREFIX."product p ON p.rowid = m.fk_product";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entrepot e ON e.rowid = m.fk_entrepot";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user u ON u.rowid = m.fk_user_author";
-$sql .= " WHERE mef.fk_proposal = ".((int) $object->id);
-$sql .= " AND m.entity IN (".getEntity('stock').")";
+$sql .= " WHERE mef.devis = ".((int) $object->id);
+$sql .= " AND p.entity IN (".getEntity('product').")";
 $sql .= " ORDER BY p.ref ASC, m.datem ASC";
 
 $resql = $db->query($sql);
@@ -115,7 +115,7 @@ if ($resql) {
 				'retour' => 0,
 			);
 		}
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
 		if ($qty < 0) {
 			$by_product[$pid]['sortie'] += abs($qty);
 		} else {
@@ -176,7 +176,7 @@ if (empty($rows)) {
 		if ($obj->product_label) { print '<br><span class="opacitymedium">'.dol_trunc($obj->product_label, 40).'</span>'; }
 		print '</td>';
 
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
 		if ($qty < 0) {
 			print '<td><span class="badge badge-warning">'.$langs->trans('Sortie').'</span></td>';
 			print '<td class="right" style="color:var(--colorwarning);font-weight:bold;">-'.price(abs($qty)).'</td>';

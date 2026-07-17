@@ -14,8 +14,8 @@
  */
 
 $res = 0;
-if (!$res && !empty($_SERVER['CONTEXT_DOCUMENT_ROOT'])) {
-	$res = @include $_SERVER['CONTEXT_DOCUMENT_ROOT'].'/main.inc.php';
+if (!$res && !empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) {
+	$res = @include $_SERVER["CONTEXT_DOCUMENT_ROOT"].'/main.inc.php';
 }
 $tmp = empty($_SERVER['SCRIPT_FILENAME']) ? '' : $_SERVER['SCRIPT_FILENAME'];
 $tmp2 = realpath(__FILE__);
@@ -32,7 +32,7 @@ require_once DOL_DOCUMENT_ROOT.'/product/stock/class/mouvementstock.class.php';
 require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
-require_once DOL_DOCUMENT_ROOT.'/product/class/html.formproduct.class.php';
+require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/dolistockmove/lib/dolistockmove.lib.php');
 
 $langs->loadLangs(array('dolistockmove@dolistockmove', 'stocks', 'products', 'propal'));
@@ -54,11 +54,69 @@ if (empty($fk_entrepot)) {
 	$fk_entrepot = getDolGlobalInt('DOLISTOCKMOVE_DEFAULT_WAREHOUSE');
 }
 
-$form        = new Form($db);
-$formproduct = new FormProduct($db);
+$form = new Form($db);
 
 $errors   = array();
 $messages = array();
+
+// ─── Pre-load data for dropdowns ───────────────────────────────────────────
+
+// All proposals (ref + third party name)
+$propalOptions = array();
+$sqlPropals  = "SELECT pr.rowid, pr.ref, s.nom as soc_name";
+$sqlPropals .= " FROM ".MAIN_DB_PREFIX."propal pr";
+$sqlPropals .= " LEFT JOIN ".MAIN_DB_PREFIX."societe s ON s.rowid = pr.fk_soc";
+$sqlPropals .= " WHERE pr.entity IN (".getEntity('propal').")";
+$sqlPropals .= " ORDER BY pr.ref DESC";
+$resPropals = $db->query($sqlPropals);
+if ($resPropals) {
+	while ($obj = $db->fetch_object($resPropals)) {
+		$label = $obj->ref;
+		if (!empty($obj->soc_name)) {
+			$label .= ' — '.$obj->soc_name;
+		}
+		$propalOptions[(int) $obj->rowid] = $label;
+	}
+	$db->free($resPropals);
+}
+
+// All warehouses
+$warehouseOptions = dolistockmoveGetWarehouses($db, 0, true);
+
+// All products (ref + label)
+$productOptions = array();
+$sqlProducts  = "SELECT p.rowid, p.ref, p.label";
+$sqlProducts .= " FROM ".MAIN_DB_PREFIX."product p";
+$sqlProducts .= " WHERE p.entity IN (".getEntity('product').")";
+$sqlProducts .= " AND p.fk_product_type IN (0, 1)";
+$sqlProducts .= " ORDER BY p.ref ASC";
+$resProducts = $db->query($sqlProducts);
+if ($resProducts) {
+	while ($obj = $db->fetch_object($resProducts)) {
+		$label = $obj->ref;
+		if (!empty($obj->label)) {
+			$label .= ' — '.dol_trunc($obj->label, 50);
+		}
+		$productOptions[(int) $obj->rowid] = $label;
+	}
+	$db->free($resProducts);
+}
+
+// All users (for "Salarié concerné" dropdown)
+$userOptions = array();
+$sqlUsers  = "SELECT u.rowid, u.lastname, u.firstname, u.login";
+$sqlUsers .= " FROM ".MAIN_DB_PREFIX."user u";
+$sqlUsers .= " WHERE u.statut = 1";
+$sqlUsers .= " ORDER BY u.lastname, u.firstname ASC";
+$resUsers = $db->query($sqlUsers);
+if ($resUsers) {
+	while ($obj = $db->fetch_object($resUsers)) {
+		$name = trim(($obj->firstname ? $obj->firstname.' ' : '').$obj->lastname);
+		if (empty($name)) { $name = $obj->login; }
+		$userOptions[(int) $obj->rowid] = $name;
+	}
+	$db->free($resUsers);
+}
 
 /*
  * Actions
@@ -85,10 +143,10 @@ if ($action === 'save' && !GETPOST('cancel')) {
 	}
 
 	// Parse product lines
-	$product_ids = GETPOST('product_id', 'array');
-	$product_qtys = GETPOST('product_qty', 'array');
-	$product_types = GETPOST('product_type', 'array');
-	$product_labels = GETPOST('product_label_line', 'array');
+	$product_ids    = GETPOST('product_id', 'array');
+	$product_qtys   = GETPOST('product_qty', 'array');
+	$product_types  = GETPOST('product_type', 'array');
+	$product_salaries = GETPOST('product_salarie', 'array');
 
 	if (empty($product_ids) || count($product_ids) == 0) {
 		$error++;
@@ -99,10 +157,10 @@ if ($action === 'save' && !GETPOST('cancel')) {
 	$lines = array();
 	if (!$error && is_array($product_ids)) {
 		foreach ($product_ids as $idx => $pid) {
-			$pid  = (int) $pid;
-			$qty  = isset($product_qtys[$idx]) ? (float) str_replace(',', '.', $product_qtys[$idx]) : 0;
-			$type = isset($product_types[$idx]) ? $product_types[$idx] : 'sortie';
-			$lbl  = isset($product_labels[$idx]) ? dol_sanitizeFileName($product_labels[$idx]) : '';
+			$pid     = (int) $pid;
+			$qty     = isset($product_qtys[$idx]) ? (float) str_replace(',', '.', $product_qtys[$idx]) : 0;
+			$type    = isset($product_types[$idx]) ? $product_types[$idx] : 'sortie';
+			$salarie = isset($product_salaries[$idx]) ? (int) $product_salaries[$idx] : 0;
 
 			if ($pid <= 0) {
 				$error++;
@@ -118,8 +176,8 @@ if ($action === 'save' && !GETPOST('cancel')) {
 			$lines[] = array(
 				'product_id' => $pid,
 				'qty'        => $qty,
-				'type'       => $type,  // 'sortie' or 'retour'
-				'label'      => $lbl,
+				'type'       => $type,
+				'salarie'    => $salarie,
 			);
 		}
 	}
@@ -140,19 +198,15 @@ if ($action === 'save' && !GETPOST('cancel')) {
 		foreach ($lines as $line) {
 			$mouvement = new MouvementStock($db);
 
-			// Signed qty: negative for exit, positive for return/entry
 			if ($line['type'] === 'sortie') {
 				$signed_qty = -abs($line['qty']);
-				$mvt_type   = 1; // exit
+				$mvt_type   = 1;
 			} else {
 				$signed_qty = abs($line['qty']);
-				$mvt_type   = 0; // entry / return
+				$mvt_type   = 0;
 			}
 
 			$line_label = $global_label;
-			if (!empty($line['label'])) {
-				$line_label = ($global_label ? $global_label.' — ' : '').$line['label'];
-			}
 
 			$result = $mouvement->_create(
 				$user,
@@ -160,25 +214,27 @@ if ($action === 'save' && !GETPOST('cancel')) {
 				$fk_entrepot,
 				$signed_qty,
 				$mvt_type,
+				0,
 				$line_label,
-				'',            // inventory code
+				'',
 				$date_mouvement
 			);
 
 			if ($result > 0) {
-				// Link this movement to the proposal via extrafield
-				if (!empty($fk_proposal)) {
-					$mouvement->id = $result;
-					$mouvement->array_options['options_fk_proposal'] = $fk_proposal;
-					$res2 = $mouvement->insertExtraFields();
-					if ($res2 < 0) {
-						// Log warning but don't abort — movement already created
-						dol_syslog('DoliStockMove: insertExtraFields failed for movement '.$result, LOG_WARNING);
-					}
+				// Save devis + salarie via direct SQL (bypasses link-type validation)
+				$sqlDel = "DELETE FROM ".MAIN_DB_PREFIX."stock_mouvement_extrafields WHERE fk_object = ".(int) $result;
+				$db->query($sqlDel);
+
+				$devisVal  = !empty($fk_proposal) ? (int) $fk_proposal : 'NULL';
+				$salarieVal = $line['salarie'] > 0 ? (int) $line['salarie'] : 'NULL';
+
+				$sqlEf  = "INSERT INTO ".MAIN_DB_PREFIX."stock_mouvement_extrafields (fk_object, devis, salarie)";
+				$sqlEf .= " VALUES (".(int) $result.", ".$devisVal.", ".$salarieVal.")";
+				if (!$db->query($sqlEf)) {
+					dol_syslog('DoliStockMove: extrafields insert failed for movement '.$result.': '.$db->lasterror(), LOG_WARNING);
 				}
 				$created++;
 			} else {
-				// Fetch product ref for error message
 				$product = new Product($db);
 				$product->fetch($line['product_id']);
 				$errors[] = $langs->trans('MovementError', $product->ref);
@@ -192,7 +248,6 @@ if ($action === 'save' && !GETPOST('cancel')) {
 		} else {
 			$db->commit();
 			$messages[] = $langs->trans('MovementsCreated');
-			// Reset form after success
 			$fk_proposal  = 0;
 			$global_label = '';
 			$action       = '';
@@ -208,7 +263,6 @@ llxHeader('', $title, '', '', 0, 0, array(), array(), '', 'mod-dolistockmove pag
 
 print load_fiche_titre(img_picto('', 'fa-dolly', 'class="paddingright"').$title, '', '');
 
-// Show messages
 if (!empty($errors)) {
 	setEventMessages(implode('<br>', $errors), null, 'errors');
 }
@@ -216,7 +270,6 @@ if (!empty($messages)) {
 	setEventMessages(implode('<br>', $messages), null, 'mesgs');
 }
 
-// Opening form
 print '<form id="dolistockmove_form" method="POST" action="'.$_SERVER['PHP_SELF'].'">';
 print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="action" value="save">';
@@ -227,35 +280,36 @@ print dol_get_fiche_head(array(), '', '', -1);
 print '<div class="fichecenter">';
 print '<table class="border centpercent tableforfield">';
 
-// Proposal
+// Proposal — <select> dropdown with ref + third party name
 $allowNoProposal = getDolGlobalInt('DOLISTOCKMOVE_ALLOW_NO_PROPOSAL');
 print '<tr>';
 print '<td class="titlefieldcreate'.($allowNoProposal ? '' : ' fieldrequired').'">'.$langs->trans('ProposalCommerciale').'</td>';
 print '<td>';
-
-// Autocomplete proposal selector
-$selected_propal_ref = '';
-if (!empty($fk_proposal)) {
-	$sqlp = 'SELECT ref FROM '.MAIN_DB_PREFIX.'propal WHERE rowid = '.((int) $fk_proposal);
-	$rp = $db->query($sqlp);
-	if ($rp && $obj = $db->fetch_object($rp)) {
-		$selected_propal_ref = $obj->ref;
-	}
+print '<select id="fk_proposal" name="fk_proposal" class="flat minwidth400">';
+if ($allowNoProposal) {
+	print '<option value="0">—</option>';
 }
-
-print '<input type="hidden" id="fk_proposal" name="fk_proposal" value="'.dol_escape_htmltag($fk_proposal).'">';
-print '<input type="text" id="fk_proposal_search" class="form-control minwidth300"';
-print ' placeholder="'.$langs->trans('SearchProposal').'"';
-print ' value="'.dol_escape_htmltag($selected_propal_ref).'"';
-print ' autocomplete="off">';
-print '<div id="propal_autocomplete_results" class="dolistockmove-autocomplete-list" style="display:none;"></div>';
+foreach ($propalOptions as $pid => $plabel) {
+	print '<option value="'.$pid.'"'.($pid == $fk_proposal ? ' selected' : '').'>';
+	print dol_escape_htmltag($plabel);
+	print '</option>';
+}
+print '</select>';
 print '</td></tr>';
 
-// Warehouse
+// Warehouse — <select> dropdown
 print '<tr>';
 print '<td class="titlefieldcreate fieldrequired">'.$langs->trans('SelectWarehouse').'</td>';
 print '<td>';
-print $formproduct->selectWarehouses($fk_entrepot, 'fk_entrepot', '', 1, 1, 0, '', 0, 0, 'minwidth200');
+print '<select id="fk_entrepot" name="fk_entrepot" class="flat minwidth300">';
+print '<option value="0">—</option>';
+foreach ($warehouseOptions as $wid => $wlabel) {
+	if ($wid === 0) { continue; }
+	print '<option value="'.$wid.'"'.($wid == $fk_entrepot ? ' selected' : '').'>';
+	print dol_escape_htmltag($wlabel);
+	print '</option>';
+}
+print '</select>';
 print '</td></tr>';
 
 // Date
@@ -285,24 +339,24 @@ print '<div class="table-responsive">';
 print '<table class="noborder centpercent dolistockmove-lines-table" id="dolistockmove_lines">';
 print '<thead>';
 print '<tr class="liste_titre">';
-print '<th style="min-width:220px">'.$langs->trans('Product').'</th>';
+print '<th style="min-width:300px">'.$langs->trans('Product').'</th>';
 print '<th style="width:100px;text-align:center">'.$langs->trans('CurrentStock').'</th>';
 print '<th style="width:130px">'.$langs->trans('MoveType').'</th>';
 print '<th style="width:90px">'.$langs->trans('Qty').'</th>';
-print '<th>'.$langs->trans('LineComment').'</th>';
+print '<th>'.$langs->trans('SalarieConcerne').'</th>';
 print '<th style="width:40px"></th>';
 print '</tr>';
 print '</thead>';
 print '<tbody id="dolistockmove_lines_body">';
 
-// Initial empty line
-print dolistockmove_render_line(0);
+// Initial line
+print dolistockmove_render_line(0, $productOptions, $userOptions, $prefill_product_id);
 
 print '</tbody>';
 print '</table>';
 print '</div>';
 
-// Action buttons below the table
+// Action buttons
 print '<div class="dolistockmove-table-actions">';
 print '<button type="button" id="dolistockmove_add_line" class="button buttonaction">';
 print img_picto('', 'fa-plus', 'class="paddingright"').$langs->trans('AddLine');
@@ -313,7 +367,7 @@ print img_picto('', 'fa-plus-circle', 'class="paddingright"').$langs->trans('Cre
 print '</button>';
 print '</div>';
 
-print '</div>'; // dolistockmove-lines-container
+print '</div>';
 
 print dol_get_fiche_end();
 
@@ -325,6 +379,13 @@ print '<a class="button button-cancel btn-lg" href="'.dol_buildpath('/dolistockm
 print '</div>';
 
 print '</form>';
+
+// Link to movement list
+print '<div class="center" style="margin-top:15px;">';
+print '<a class="button buttonaction" href="'.dol_buildpath('/dolistockmove/stockmove_list.php', 1).'">';
+print img_picto('', 'fa-list', 'class="paddingright"').$langs->trans('StockMoveList');
+print '</a>';
+print '</div>';
 
 // ================================================================
 // Quick product creation modal
@@ -360,19 +421,19 @@ print '
   </div>
 </div>';
 
-// Pass config to JS
+// Pass config + product options HTML to JS
+$productOptionsJson = json_encode($productOptions, JSON_UNESCAPED_UNICODE);
 print '<script>';
 print 'var dolistockmoveConfig = {';
 print '  ajaxUrl: "'.dol_buildpath('/dolistockmove/ajax/product_info.php', 1).'",';
 print '  createUrl: "'.dol_buildpath('/dolistockmove/ajax/create_product.php', 1).'",';
-print '  propalUrl: "'.dol_buildpath('/dolistockmove/ajax/product_info.php', 1).'",';
 print '  token: "'.currentToken().'",';
 print '  fk_entrepot: '.(int) $fk_entrepot.',';
 print '  prefillProductId: '.(int) $prefill_product_id.',';
-print '  prefillProductRef: "'.dol_escape_js($prefill_product_ref).'",';
 print '  lblSortie: "'.dol_escape_js($langs->trans('Sortie')).'",';
 print '  lblRetour: "'.dol_escape_js($langs->trans('Retour')).'",';
 print '  lblCurrentStock: "'.dol_escape_js($langs->trans('CurrentStock')).'",';
+print '  productOptions: '.$productOptionsJson.',';
 print '};';
 print '</script>';
 
@@ -380,24 +441,30 @@ llxFooter();
 $db->close();
 
 /**
- * Render one product line (server-side, for the initial line)
+ * Render one product line with <select> dropdowns
  *
- * @param  int $idx  Line index
- * @return string    HTML
+ * @param  int     $idx             Line index
+ * @param  array   $productOptions  [id => label, ...]
+ * @param  array   $userOptions     [id => name, ...]
+ * @param  int     $selectedId      Pre-selected product ID (0 = none)
+ * @return string  HTML
  */
-function dolistockmove_render_line($idx)
+function dolistockmove_render_line($idx, $productOptions = array(), $userOptions = array(), $selectedId = 0)
 {
 	global $langs;
 
 	$html  = '<tr class="dolistockmove-line oddeven" data-idx="'.$idx.'">';
 
-	// Product field (text autocomplete)
+	// Product — <select> dropdown
 	$html .= '<td>';
-	$html .= '<input type="hidden" name="product_id[]" class="dsm-product-id" value="">';
-	$html .= '<input type="text" class="dsm-product-search form-control"';
-	$html .= ' placeholder="'.dol_escape_htmltag($langs->trans('TypeToSearch')).'"';
-	$html .= ' autocomplete="off">';
-	$html .= '<div class="dolistockmove-autocomplete-list dsm-product-results" style="display:none;"></div>';
+	$html .= '<select name="product_id[]" class="dsm-product-select flat minwidth300">';
+	$html .= '<option value="0">—</option>';
+	foreach ($productOptions as $pid => $plabel) {
+		$html .= '<option value="'.$pid.'"'.($pid == $selectedId ? ' selected' : '').'>';
+		$html .= dol_escape_htmltag($plabel);
+		$html .= '</option>';
+	}
+	$html .= '</select>';
 	$html .= '</td>';
 
 	// Current stock badge
@@ -405,7 +472,7 @@ function dolistockmove_render_line($idx)
 
 	// Type (sortie / retour)
 	$html .= '<td>';
-	$html .= '<select name="product_type[]" class="dsm-type flat select2 minwidth100">';
+	$html .= '<select name="product_type[]" class="dsm-type flat minwidth100">';
 	$html .= '<option value="sortie" selected>'.$langs->trans('Sortie').'</option>';
 	$html .= '<option value="retour">'.$langs->trans('Retour').'</option>';
 	$html .= '</select>';
@@ -416,9 +483,14 @@ function dolistockmove_render_line($idx)
 	$html .= '<input type="number" name="product_qty[]" class="dsm-qty form-control" min="0.001" step="0.001" value="" style="width:80px">';
 	$html .= '</td>';
 
-	// Line comment
+	// Salarié concerné — user <select> dropdown
 	$html .= '<td>';
-	$html .= '<input type="text" name="product_label_line[]" class="form-control" placeholder="'.$langs->trans('OptionalComment').'">';
+	$html .= '<select name="product_salarie[]" class="dsm-salarie-select flat minwidth200">';
+	$html .= '<option value="0">—</option>';
+	foreach ($userOptions as $uid => $uname) {
+		$html .= '<option value="'.$uid.'">'.dol_escape_htmltag($uname).'</option>';
+	}
+	$html .= '</select>';
 	$html .= '</td>';
 
 	// Remove button

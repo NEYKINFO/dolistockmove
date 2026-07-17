@@ -4,37 +4,27 @@
 /**
  * DoliStockMove — JavaScript
  * Handles:
- *  - Proposal autocomplete (header field)
- *  - Product search autocomplete per line
- *  - Stock badge update after product selection
- *  - Dynamic line add/remove
- *  - Quick product creation modal
+ *  - Product <select> change → update stock badge
+ *  - Dynamic line add/remove (cloning <select> options)
  *  - Warehouse change → refresh all stock badges
+ *  - Quick product creation modal
  *  - Basic form validation before submit
  */
 
 (function ($) {
 	'use strict';
 
-	// Config injected server-side (see stockmove_card.php)
 	var cfg = window.dolistockmoveConfig || {};
-
-	var lineIdx = 1; // counter for new lines (line 0 already in DOM)
+	var lineIdx = 1;
 
 	// ================================================================
 	// Utilities
 	// ================================================================
 
-	/**
-	 * Get the currently selected warehouse ID from the select field.
-	 */
 	function getWarehouseId() {
 		return parseInt($('#fk_entrepot').val()) || cfg.fk_entrepot || 0;
 	}
 
-	/**
-	 * Render a stock badge with colour class based on quantity.
-	 */
 	function renderStockBadge(qty) {
 		var cls = 'stock-ok';
 		if (qty <= 0)  { cls = 'stock-zero'; }
@@ -42,9 +32,6 @@
 		return '<span class="dsm-stock-badge ' + cls + '">' + parseFloat(qty).toFixed(2) + '</span>';
 	}
 
-	/**
-	 * AJAX helper — returns a jQuery Deferred.
-	 */
 	function ajaxGet(url, data) {
 		return $.ajax({
 			url: url,
@@ -63,118 +50,23 @@
 		});
 	}
 
-	/**
-	 * Position a fixed dropdown below an input field.
-	 * Uses fixed positioning to escape table overflow:hidden constraints.
-	 */
-	function positionDropdown($input, $dropdown) {
-		var offset = $input.offset();
-		$dropdown.css({
-			top:   (offset.top + $input.outerHeight()) + 'px',
-			left:  offset.left + 'px',
-			width: Math.max($input.outerWidth(), 280) + 'px',
-		});
-	}
-
 	// ================================================================
-	// Proposal autocomplete
+	// Product select change → update stock badge
 	// ================================================================
-	function initProposalAutocomplete() {
-		var $input   = $('#fk_proposal_search');
-		var $hidden  = $('#fk_proposal');
-		var $results = $('#propal_autocomplete_results');
-		var timer;
-
-		$input.on('input', function () {
-			clearTimeout(timer);
-			var term = $(this).val().trim();
-			$hidden.val('');
-			if (term.length < 2) { $results.hide().empty(); return; }
-
-			timer = setTimeout(function () {
-				ajaxGet(cfg.ajaxUrl, { action: 'propal', term: term })
-					.done(function (data) {
-						$results.empty();
-						if (!data || data.length === 0) {
-							$results.hide();
-							return;
-						}
-						$.each(data, function (i, item) {
-							var $item = $('<div class="dsm-ac-item">')
-								.html('<span class="dsm-ac-ref">' + escHtml(item.ref) + '</span>'
-									+ '<span class="dsm-ac-label">' + escHtml(item.label) + '</span>');
-							$item.on('click', function () {
-								$input.val(item.ref);
-								$hidden.val(item.id);
-								$results.hide().empty();
-							});
-							$results.append($item);
-						});					positionDropdown($input, $results);						$results.show();
-					});
-			}, 280);
-		});
-
-		$(document).on('click', function (e) {
-			if (!$(e.target).closest('#fk_proposal_search, #propal_autocomplete_results').length) {
-				$results.hide();
-			}
-		});
-	}
-
-	// ================================================================
-	// Product autocomplete (per line)
-	// ================================================================
-	function initProductAutocomplete($row) {
-		var $input   = $row.find('.dsm-product-search');
-		var $hidden  = $row.find('.dsm-product-id');
-		var $results = $row.find('.dsm-product-results');
-		var $badge   = $row.find('.dsm-stock-badge');
-		var timer;
-
-		$input.on('input', function () {
-			clearTimeout(timer);
-			var term = $(this).val().trim();
-			$hidden.val('');
-			$badge.removeClass('stock-ok stock-low stock-zero').text('—');
-			if (term.length < 2) { $results.hide().empty(); return; }
-
-			var wh = getWarehouseId();
-			timer = setTimeout(function () {
-				ajaxGet(cfg.ajaxUrl, { action: 'search', term: term, fk_entrepot: wh })
-					.done(function (data) {
-						$results.empty();
-						if (!data || data.length === 0) { $results.hide(); return; }
-						$.each(data, function (i, item) {
-							var $item = $('<div class="dsm-ac-item">').html(
-								'<span class="dsm-ac-ref">' + escHtml(item.ref) + '</span>'
-								+ '<span class="dsm-ac-label">' + escHtml(item.label) + '</span>'
-							+ '<span class="dsm-ac-stock">Stock : ' + parseFloat(item.stock).toFixed(2) + '</span>'
-						);
-						$item.on('click', function () {
-							$input.val(item.value);
-							$hidden.val(item.id);
-							$results.hide().empty();
-							updateStockBadge($row, item.id);
-						});
-						$results.append($item);
-					});
-					positionDropdown($input, $results);
-						$results.show();
-					});
-			}, 280);
-		});
-
-		$(document).on('click', function (e) {
-			if (!$(e.target).closest($row).length) {
-				$results.hide();
-			}
+	function initProductSelect($row) {
+		$row.find('.dsm-product-select').on('change', function () {
+			var productId = parseInt($(this).val()) || 0;
+			updateStockBadge($row, productId);
 		});
 	}
 
 	function updateStockBadge($row, productId) {
 		var $badge = $row.find('.dsm-stock-badge');
 		var wh = getWarehouseId();
-		if (!productId) { $badge.removeClass('stock-ok stock-low stock-zero').text('—'); return; }
+		if (!productId || productId <= 0) {
+			$badge.removeClass('stock-ok stock-low stock-zero').text('—');
+			return;
+		}
 		ajaxGet(cfg.ajaxUrl, { action: 'stock', product_id: productId, fk_entrepot: wh })
 			.done(function (data) {
 				if (data && typeof data.stock !== 'undefined') {
@@ -194,26 +86,21 @@
 		$('#fk_entrepot').on('change', function () {
 			$('#dolistockmove_lines_body .dolistockmove-line').each(function () {
 				var $row = $(this);
-				var pid  = parseInt($row.find('.dsm-product-id').val());
+				var pid = parseInt($row.find('.dsm-product-select').val());
 				if (pid > 0) { updateStockBadge($row, pid); }
 			});
 		});
 	}
 
 	// ================================================================
-	// Build an HTML line (clone of the first line structure)
+	// Build an HTML line by cloning the first line's product <select>
 	// ================================================================
 	function buildLine(idx) {
-		var sortieLabel = escHtml(cfg.lblSortie  || 'Sortie');
+		var sortieLabel = escHtml(cfg.lblSortie || 'Sortie');
 		var retourLabel = escHtml(cfg.lblRetour || 'Retour');
-		var searchLabel = escHtml(cfg.lblSearchProduct || 'Rechercher un produit...');
 
 		return '<tr class="dolistockmove-line oddeven" data-idx="' + idx + '">'
-			+ '<td style="position:relative">'
-			+   '<input type="hidden" name="product_id[]" class="dsm-product-id" value="">'
-			+   '<input type="text" class="dsm-product-search form-control" placeholder="' + searchLabel + '" autocomplete="off">'
-			+   '<div class="dolistockmove-autocomplete-list dsm-product-results" style="display:none;"></div>'
-			+ '</td>'
+			+ '<td></td>'
 			+ '<td class="center"><span class="dsm-stock-badge">—</span></td>'
 			+ '<td>'
 			+   '<select name="product_type[]" class="dsm-type flat minwidth100">'
@@ -224,9 +111,7 @@
 			+ '<td>'
 			+   '<input type="number" name="product_qty[]" class="dsm-qty form-control" min="0.001" step="0.001" value="" style="width:80px">'
 			+ '</td>'
-			+ '<td>'
-			+   '<input type="text" name="product_label_line[]" class="form-control" placeholder="">'
-			+ '</td>'
+			+ '<td></td>'
 			+ '<td class="center">'
 			+   '<button type="button" class="dsm-remove-line" title="Supprimer"><i class="fa fa-trash-alt"></i></button>'
 			+ '</td>'
@@ -241,8 +126,24 @@
 			var html = buildLine(lineIdx++);
 			var $row = $(html);
 			$('#dolistockmove_lines_body').append($row);
-			initProductAutocomplete($row);
-			$row.find('.dsm-product-search').trigger('focus');
+
+			// Clone the product <select> from the first line
+			var $firstProductSelect = $('#dolistockmove_lines_body .dolistockmove-line').first().find('.dsm-product-select');
+			var $clonedProductSelect = $firstProductSelect.clone();
+			$clonedProductSelect.val(0);
+			$row.find('td').eq(0).append($clonedProductSelect);
+
+			// Clone the salarie <select> from the first line
+			var $firstSalarieSelect = $('#dolistockmove_lines_body .dolistockmove-line').first().find('.dsm-salarie-select');
+			var $clonedSalarieSelect = $firstSalarieSelect.clone();
+			$clonedSalarieSelect.val(0);
+			$row.find('td').eq(4).append($clonedSalarieSelect);
+
+			initSelect2($clonedProductSelect);
+			initSelect2($clonedSalarieSelect);
+			initSelect2($row.find('.dsm-type'));
+			initProductSelect($row);
+			$row.find('.dsm-product-select').trigger('focus');
 		});
 	}
 
@@ -253,13 +154,10 @@
 		$('#dolistockmove_lines_body').on('click', '.dsm-remove-line', function () {
 			var $rows = $('#dolistockmove_lines_body .dolistockmove-line');
 			if ($rows.length <= 1) {
-				// Reset the last line instead of removing it
 				var $row = $rows.first();
-				$row.find('.dsm-product-id').val('');
-				$row.find('.dsm-product-search').val('');
+				$row.find('.dsm-product-select').val(0);
 				$row.find('.dsm-stock-badge').removeClass('stock-ok stock-low stock-zero').text('—');
 				$row.find('.dsm-qty').val('');
-				$row.find('.dsm-product-search').trigger('focus');
 			} else {
 				$(this).closest('.dolistockmove-line').remove();
 			}
@@ -274,10 +172,9 @@
 			var hasError = false;
 			var messages = [];
 
-			// Check at least one line with a product + qty
 			var hasValidLine = false;
 			$('#dolistockmove_lines_body .dolistockmove-line').each(function () {
-				var pid = parseInt($(this).find('.dsm-product-id').val());
+				var pid = parseInt($(this).find('.dsm-product-select').val());
 				var qty = parseFloat($(this).find('.dsm-qty').val());
 				if (pid > 0 && qty > 0) {
 					hasValidLine = true;
@@ -310,11 +207,9 @@
 		var $btnCreate = $('#dolistockmove_modal_create');
 		var $errorDiv  = $('#new_product_error');
 
-		// Remember which row triggered the modal
 		var $targetRow = null;
 
 		$btnOpen.on('click', function () {
-			// Use the last focused / last row
 			$targetRow = $('#dolistockmove_lines_body .dolistockmove-line').last();
 			$('#new_product_ref').val('');
 			$('#new_product_label').val('');
@@ -356,10 +251,10 @@
 			})
 				.done(function (data) {
 					if (data && data.id) {
-						// Fill the target row
 						if ($targetRow && $targetRow.length) {
-							$targetRow.find('.dsm-product-id').val(data.id);
-							$targetRow.find('.dsm-product-search').val(data.value || data.ref);
+							var $sel = $targetRow.find('.dsm-product-select');
+							$sel.append('<option value="' + data.id + '">' + escHtml(data.ref + (data.label ? ' — ' + data.label : '')) + '</option>');
+							$sel.val(data.id);
 							updateStockBadge($targetRow, data.id);
 						}
 						$overlay.hide();
@@ -391,28 +286,59 @@
 	}
 
 	// ================================================================
+	// Select2 — flexible search (substring match, no minimum)
+	// ================================================================
+	function initSelect2($sel) {
+		if (!$.fn.select2) { return; }
+		// Destroy any existing select2 instance (Dolibarr auto-init may have bad settings)
+		try { $sel.select2('destroy'); } catch (e) { /* ignore */ }
+		$sel.select2({
+			width: '100%',
+			minimumInputLength: 0,
+			minimumResultsForSearch: 0,
+			closeOnSelect: true,
+			dropdownAutoWidth: true,
+			matcher: function (params, data) {
+				if ($.trim(params.term) === '') { return data; }
+				if (!data.text) { return null; }
+				var term = params.term.toLowerCase();
+				var text = data.text.toLowerCase();
+				if (text.indexOf(term) > -1) {
+					var modified = $.extend({}, data, true);
+					return modified;
+				}
+				return null;
+			},
+		});
+	}
+
+	function initAllSelect2() {
+		$('#fk_proposal').each(function () { initSelect2($(this)); });
+		$('#fk_entrepot').each(function () { initSelect2($(this)); });
+		$('.dsm-product-select').each(function () { initSelect2($(this)); });
+		$('.dsm-salarie-select').each(function () { initSelect2($(this)); });
+		$('.dsm-type').each(function () { initSelect2($(this)); });
+	}
+
+	// ================================================================
 	// Init on DOM ready
 	// ================================================================
 	$(function () {
-		// Only init on the card page (config object exists)
 		if (!window.dolistockmoveConfig) { return; }
 
-		// Proposal autocomplete
-		if ($('#fk_proposal_search').length) {
-			initProposalAutocomplete();
-		}
+		// Init select2 with flexible search on all dropdowns
+		initAllSelect2();
 
-		// Init product autocomplete on existing lines
+		// Init product select change handlers on existing lines
 		$('#dolistockmove_lines_body .dolistockmove-line').each(function () {
-			initProductAutocomplete($(this));
+			initProductSelect($(this));
 		});
 
 		// Pre-fill first line if coming from a product card
-		if (cfg.prefillProductId > 0 && cfg.prefillProductRef) {
+		if (cfg.prefillProductId > 0) {
 			var $firstRow = $('#dolistockmove_lines_body .dolistockmove-line').first();
 			if ($firstRow.length) {
-				$firstRow.find('.dsm-product-id').val(cfg.prefillProductId);
-				$firstRow.find('.dsm-product-search').val(cfg.prefillProductRef);
+				$firstRow.find('.dsm-product-select').val(cfg.prefillProductId);
 				updateStockBadge($firstRow, cfg.prefillProductId);
 			}
 		}

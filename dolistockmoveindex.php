@@ -79,14 +79,14 @@ print '<td>'.$langs->trans('Qty').'</td>';
 print '<td>'.$langs->trans('LinkedProposal').'</td>';
 print '</tr>';
 
-$sql  = "SELECT m.rowid, m.datem, m.qty, m.fk_product,";
+$sql  = "SELECT m.rowid, m.datem, m.value, m.fk_product,";
 $sql .= " p.ref as product_ref, p.label as product_label,";
 $sql .= " pr.ref as propal_ref, pr.rowid as propal_id";
-$sql .= " FROM ".MAIN_DB_PREFIX."mouvement_stock m";
+$sql .= " FROM ".MAIN_DB_PREFIX."stock_mouvement m";
 $sql .= " INNER JOIN ".MAIN_DB_PREFIX."product p ON p.rowid = m.fk_product";
-$sql .= " INNER JOIN ".MAIN_DB_PREFIX."mouvement_stock_extrafields mef ON mef.fk_object = m.rowid";
-$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.fk_proposal";
-$sql .= " WHERE m.entity IN (".getEntity('stock').")";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."stock_mouvement_extrafields mef ON mef.fk_object = m.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.devis";
+$sql .= " WHERE p.entity IN (".getEntity('product').")";
 $sql .= " ORDER BY m.datem DESC";
 $sql .= $db->plimit(10, 0);
 
@@ -101,7 +101,7 @@ if ($resql) {
 		print '<tr class="oddeven">';
 		print '<td>'.dol_print_date($db->jdate($obj->datem), 'day').'</td>';
 		print '<td><strong>'.$obj->product_ref.'</strong> — '.dol_trunc($obj->product_label, 30).'</td>';
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
 		$class = $qty < 0 ? 'badge badge-warning' : 'badge badge-success';
 		$sign = $qty < 0 ? '' : '+';
 		print '<td><span class="'.$class.'">'.$sign.price($qty).'</span></td>';

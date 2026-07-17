@@ -120,68 +120,19 @@ class modDolistockmove extends DolibarrModules
 		$this->rights = array();
 
 		// -------------------------
-		// Left-menu entries under the native "Stock" top menu
+		// Left-menu entries under Products/Services top menu
 		// -------------------------
 		$this->menu = array();
 		$r = 0;
 
-		// Group entry
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=stock',
-			'type'     => 'left',
-			'titre'    => 'DoliStockMove',
-			'prefix'   => img_picto('', 'fa-dolly', 'class="paddingright pictofixedwidth valignmiddle"'),
-			'mainmenu' => 'stock',
-			'leftmenu' => 'dolistockmove',
-			'url'      => '/dolistockmove/dolistockmoveindex.php',
-			'langs'    => 'dolistockmove@dolistockmove',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("dolistockmove")',
-			'perms'    => '$user->hasRight("stock","lire")',
-			'target'   => '',
-			'user'     => 2,
-		);
-
 		// New movement
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=stock,fk_leftmenu=dolistockmove',
-			'type'     => 'left',
-			'titre'    => 'NewStockMove',
-			'mainmenu' => 'stock',
-			'leftmenu' => 'dolistockmove_new',
-			'url'      => '/dolistockmove/stockmove_card.php',
-			'langs'    => 'dolistockmove@dolistockmove',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("dolistockmove")',
-			'perms'    => '$user->hasRight("stock","mouvement","creer")',
-			'target'   => '',
-			'user'     => 2,
-		);
-
-		// Movement list
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=stock,fk_leftmenu=dolistockmove',
-			'type'     => 'left',
-			'titre'    => 'StockMoveList',
-			'mainmenu' => 'stock',
-			'leftmenu' => 'dolistockmove_list',
-			'url'      => '/dolistockmove/stockmove_list.php',
-			'langs'    => 'dolistockmove@dolistockmove',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("dolistockmove")',
-			'perms'    => '$user->hasRight("stock","lire")',
-			'target'   => '',
-			'user'     => 2,
-		);
-
-		// Entry in Products/Services main menu
 		$this->menu[$r++] = array(
 			'fk_menu'  => 'fk_mainmenu=products',
 			'type'     => 'left',
 			'titre'    => 'NewStockMove',
 			'prefix'   => img_picto('', 'fa-dolly', 'class="paddingright pictofixedwidth valignmiddle"'),
 			'mainmenu' => 'products',
-			'leftmenu' => 'dolistockmove_newmove',
+			'leftmenu' => 'dolistockmove_new',
 			'url'      => '/dolistockmove/stockmove_card.php',
 			'langs'    => 'dolistockmove@dolistockmove',
 			'position' => 500,
@@ -190,11 +141,27 @@ class modDolistockmove extends DolibarrModules
 			'target'   => '',
 			'user'     => 2,
 		);
+
+		// Movement list
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=products',
+			'type'     => 'left',
+			'titre'    => 'StockMoveList',
+			'prefix'   => img_picto('', 'fa-list', 'class="paddingright pictofixedwidth valignmiddle"'),
+			'mainmenu' => 'products',
+			'leftmenu' => 'dolistockmove_list',
+			'url'      => '/dolistockmove/stockmove_list.php',
+			'langs'    => 'dolistockmove@dolistockmove',
+			'position' => 501,
+			'enabled'  => 'isModEnabled("dolistockmove")',
+			'perms'    => '$user->hasRight("stock","lire")',
+			'target'   => '',
+			'user'     => 2,
+		);
 	}
 
 	/**
 	 * Function called when module is enabled.
-	 * Creates SQL tables and adds the fk_proposal extrafield on mouvement_stock.
 	 *
 	 * @param  string $options Space separated list of options
 	 * @return int              1 if OK, 0 if KO
@@ -203,44 +170,32 @@ class modDolistockmove extends DolibarrModules
 	{
 		global $conf, $langs;
 
-		// Load SQL tables (creates llx_mouvement_stock_extrafields if needed)
-		$result = $this->_load_tables('/dolistockmove/sql/');
-		if ($result < 0) {
-			return -1;
-		}
-
-		// Create the fk_proposal extrafield on mouvement_stock
 		require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		$extrafields = new ExtraFields($this->db);
 
-		$listef = $extrafields->fetch_name_optionals_label('mouvement_stock');
-
-		if (empty($listef['fk_proposal'])) {
-			$result2 = $extrafields->addExtraField(
-				'fk_proposal',              // code
-				'Proposition commerciale',  // label
-				'link',                     // type
-				100,                        // pos
-				'',                         // size
-				'mouvement_stock',          // elementtype
-				0,                          // unique
-				0,                          // required
-				'',                         // default_value
-				array('options' => array('propal:ref:rowid:' => null)), // param
-				1,                          // alwayseditable
-				'',                         // perms
-				'-1',                       // list (hidden in standard forms)
-				0,                          // computed
-				'',                         // entity
-				'',                         // langfile
-				'',                         // help
-				1                           // enabled
-			);
-			if ($result2 < 0) {
-				$this->errors[] = $extrafields->error;
-				return -1;
-			}
-		}
+		$extrafields->addExtraField(
+			'salarie',
+			'Salarié concerné',
+			'select',
+			101,
+			'',
+			'stock_mouvement',
+			0,
+			0,
+			'',
+			'a:1:{s:7:"options";a:1:{s:0:"";N;}}',
+			1,
+			'',
+			1,
+			'',
+			'',
+			'',
+			'',
+			1,
+			1,
+			0,
+			array()
+		);
 
 		return $this->_init(array(), $options);
 	}

@@ -73,7 +73,7 @@ if ($action === 'search') {
 		$sql .= " AND ps.fk_entrepot = ".((int) $fk_entrepot);
 	}
 	$sql .= " WHERE p.entity IN (".getEntity('product').")";
-	$sql .= "   AND p.type IN (0, 1)";
+	$sql .= "   AND p.fk_product_type IN (0, 1)";
 	$sql .= "   AND (p.ref LIKE '%".$db->escape($term)."%' OR p.label LIKE '%".$db->escape($term)."%')";
 	$sql .= " GROUP BY p.rowid, p.ref, p.label, p.description";
 	$sql .= " ORDER BY p.ref ASC";

@@ -86,20 +86,20 @@ if ($user->hasRight('stock', 'mouvement', 'creer')) {
 }
 
 // ---- Query movements for this product ----
-// We join mouvement_stock_extrafields to list only movements created by this module.
+// We join stock_mouvement_extrafields to list only movements created by this module.
 // If no extrafields row exists for a movement, it was created by another module and is excluded.
-$sql  = "SELECT m.rowid, m.datem, m.label, m.qty, m.type, m.fk_entrepot,";
+$sql  = "SELECT m.rowid, m.datem, m.label, m.value, m.type_mouvement, m.fk_entrepot,";
 $sql .= " e.ref as entrepot_ref,";
 $sql .= " u.login as user_login, u.firstname, u.lastname,";
-$sql .= " mef.fk_proposal,";
+$sql .= " mef.devis,";
 $sql .= " pr.ref as propal_ref, pr.title as propal_title";
-$sql .= " FROM ".MAIN_DB_PREFIX."mouvement_stock m";
-$sql .= " INNER JOIN ".MAIN_DB_PREFIX."mouvement_stock_extrafields mef ON mef.fk_object = m.rowid";
+$sql .= " FROM ".MAIN_DB_PREFIX."stock_mouvement m";
+$sql .= " INNER JOIN ".MAIN_DB_PREFIX."stock_mouvement_extrafields mef ON mef.fk_object = m.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entrepot e ON e.rowid = m.fk_entrepot";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user u ON u.rowid = m.fk_user_author";
-$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.fk_proposal";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.devis";
 $sql .= " WHERE m.fk_product = ".((int) $object->id);
-$sql .= "   AND m.entity IN (".getEntity('stock').")";
+$sql .= "   AND p.entity IN (".getEntity('product').")";
 $sql .= " ORDER BY m.datem DESC";
 
 $resql = $db->query($sql);
@@ -110,7 +110,7 @@ $rows = array();
 if ($resql) {
 	while ($obj = $db->fetch_object($resql)) {
 		$rows[] = $obj;
-		$pid = (int) $obj->fk_proposal;
+		$pid = (int) $obj->devis;
 		$key = $pid > 0 ? $pid : 0;
 		if (!isset($by_proposal[$key])) {
 			$by_proposal[$key] = array(
@@ -121,7 +121,7 @@ if ($resql) {
 				'retour' => 0,
 			);
 		}
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
 		if ($qty < 0) {
 			$by_proposal[$key]['sortie'] += abs($qty);
 		} else {
@@ -184,7 +184,7 @@ if (empty($rows)) {
 		print '<tr class="oddeven">';
 		print '<td>'.dol_print_date($db->jdate($obj->datem), 'dayhour').'</td>';
 
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
 		if ($qty < 0) {
 			print '<td><span class="badge badge-warning">'.$langs->trans('Sortie').'</span></td>';
 			print '<td class="right" style="color:var(--colorwarning);font-weight:bold;">-'.price(abs($qty)).'</td>';
@@ -195,7 +195,7 @@ if (empty($rows)) {
 
 		print '<td>'.dol_escape_htmltag($obj->entrepot_ref ?: '—').'</td>';
 
-		$pid = (int) $obj->fk_proposal;
+		$pid = (int) $obj->devis;
 		if ($pid > 0) {
 			$propal_url = dol_buildpath('/comm/propal/card.php', 1).'?id='.$pid;
 			print '<td><a href="'.dol_escape_htmltag($propal_url).'">'.dol_escape_htmltag($obj->propal_ref).'</a></td>';

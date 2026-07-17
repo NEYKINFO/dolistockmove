@@ -65,8 +65,8 @@ $form = new Form($db);
 /*
  * Actions
  */
-if ($action === 'delete' && $user->hasRight('stock', 'mouvement', 'creer')) {
-	if ($confirm === 'yes' && $rowid_del > 0) {
+if (($action === 'confirm_delete' || ($action === 'delete' && $confirm === 'yes')) && $user->hasRight('stock', 'mouvement', 'creer')) {
+	if ($rowid_del > 0) {
 		// Dolibarr does not support deleting MouvementStock natively — we use direct SQL
 		// but we also need to revert the product_stock entry.
 		// We use the MouvementStock class if it has a delete method, otherwise direct SQL.
@@ -74,22 +74,22 @@ if ($action === 'delete' && $user->hasRight('stock', 'mouvement', 'creer')) {
 		$error = 0;
 
 		// Fetch movement to reverse stock
-		$sql_mv = "SELECT fk_product, fk_entrepot, qty FROM ".MAIN_DB_PREFIX."mouvement_stock WHERE rowid = ".((int) $rowid_del);
+		$sql_mv = "SELECT fk_product, fk_entrepot, value FROM ".MAIN_DB_PREFIX."stock_mouvement WHERE rowid = ".((int) $rowid_del);
 		$res_mv = $db->query($sql_mv);
 		if ($res_mv && ($obj_mv = $db->fetch_object($res_mv))) {
 			// Reverse the qty in product_stock
 			$sql_ps  = "UPDATE ".MAIN_DB_PREFIX."product_stock";
-			$sql_ps .= " SET reel = reel - ".((float) $obj_mv->qty);
+			$sql_ps .= " SET reel = reel - ".((float) $obj_mv->value);
 			$sql_ps .= " WHERE fk_product = ".((int) $obj_mv->fk_product);
 			$sql_ps .= "   AND fk_entrepot = ".((int) $obj_mv->fk_entrepot);
 			if (!$db->query($sql_ps)) { $error++; }
 
 			// Delete extrafield
-			$sql_ef = "DELETE FROM ".MAIN_DB_PREFIX."mouvement_stock_extrafields WHERE fk_object = ".((int) $rowid_del);
+			$sql_ef = "DELETE FROM ".MAIN_DB_PREFIX."stock_mouvement_extrafields WHERE fk_object = ".((int) $rowid_del);
 			if (!$db->query($sql_ef)) { $error++; }
 
 			// Delete movement
-			$sql_del = "DELETE FROM ".MAIN_DB_PREFIX."mouvement_stock WHERE rowid = ".((int) $rowid_del);
+			$sql_del = "DELETE FROM ".MAIN_DB_PREFIX."stock_mouvement WHERE rowid = ".((int) $rowid_del);
 			if (!$db->query($sql_del)) { $error++; }
 		} else {
 			$error++;
@@ -141,21 +141,23 @@ if ($user->hasRight('stock', 'mouvement', 'creer')) {
 }
 
 // ---- Build SQL query ----
-$sql  = "SELECT m.rowid, m.datem, m.label, m.qty, m.type, m.fk_product,";
+$sql  = "SELECT m.rowid, m.datem, m.label, m.value, m.type_mouvement, m.fk_product,";
 $sql .= " p.ref as product_ref, p.label as product_label,";
-$sql .= " e.ref as entrepot_ref, e.label as entrepot_label,";
+$sql .= " e.ref as entrepot_ref,";
 $sql .= " u.login as user_login, u.firstname, u.lastname,";
 $sql .= " pr.ref as propal_ref, pr.rowid as propal_id, pr.fk_soc,";
 $sql .= " s.nom as soc_name,";
-$sql .= " mef.fk_proposal";
-$sql .= " FROM ".MAIN_DB_PREFIX."mouvement_stock m";
+$sql .= " mef.devis, mef.chantier, mef.salarie,";
+$sql .= " us.lastname as salarie_lastname, us.firstname as salarie_firstname, us.login as salarie_login";
+$sql .= " FROM ".MAIN_DB_PREFIX."stock_mouvement m";
 $sql .= " INNER JOIN ".MAIN_DB_PREFIX."product p ON p.rowid = m.fk_product";
-$sql .= " INNER JOIN ".MAIN_DB_PREFIX."mouvement_stock_extrafields mef ON mef.fk_object = m.rowid";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."stock_mouvement_extrafields mef ON mef.fk_object = m.rowid";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."entrepot e ON e.rowid = m.fk_entrepot";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user u ON u.rowid = m.fk_user_author";
-$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.fk_proposal";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."propal pr ON pr.rowid = mef.devis";
 $sql .= " LEFT JOIN ".MAIN_DB_PREFIX."societe s ON s.rowid = pr.fk_soc";
-$sql .= " WHERE m.entity IN (".getEntity('stock').")";
+$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."user us ON us.rowid = mef.salarie";
+$sql .= " WHERE p.entity IN (".getEntity('product').")";
 
 // Filters
 if (!empty($search_propal)) {
@@ -181,7 +183,7 @@ if ($rescount) {
 }
 
 // Sort + paginate
-$allowed_sorts = array('m.datem', 'm.qty', 'p.ref', 'p.label', 'pr.ref', 'e.ref', 'u.login');
+$allowed_sorts = array('m.datem', 'm.value', 'p.ref', 'p.label', 'pr.ref', 'e.ref', 'u.login');
 if (!in_array($sortfield, $allowed_sorts)) { $sortfield = 'm.datem'; }
 $sortorder_safe = ($sortorder === 'ASC') ? 'ASC' : 'DESC';
 
@@ -208,20 +210,6 @@ print_barre_liste(
 	$limit
 );
 
-// Confirm delete dialog
-if ($action === 'delete') {
-	print $form->formconfirm(
-		$_SERVER['PHP_SELF'].'?rowid='.$rowid_del.'&action=delete&token='.newToken()
-			.'&search_propal='.urlencode($search_propal).'&search_product='.urlencode($search_product),
-		$langs->trans('ConfirmDeleteMove'),
-		$langs->trans('ConfirmDeleteMove'),
-		'yes',
-		'',
-		0,
-		1
-	);
-}
-
 // ---- Table ----
 print '<div class="div-table-responsive">';
 print '<table class="tagtable nobottomiftotal liste" id="tablelines">';
@@ -229,12 +217,13 @@ print '<table class="tagtable nobottomiftotal liste" id="tablelines">';
 print '<thead><tr class="liste_titre">';
 print getTitleFieldOfList($langs->trans('Date'), 0, $_SERVER['PHP_SELF'], 'm.datem', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('Product'), 0, $_SERVER['PHP_SELF'], 'p.ref', '', '', '', $sortfield, $sortorder, '');
-print getTitleFieldOfList($langs->trans('MoveDirection'), 0, $_SERVER['PHP_SELF'], 'm.qty', '', '', '', $sortfield, $sortorder, '');
-print getTitleFieldOfList($langs->trans('Qty'), 0, $_SERVER['PHP_SELF'], 'm.qty', '', '', '', $sortfield, $sortorder, '');
+print getTitleFieldOfList($langs->trans('MoveDirection'), 0, $_SERVER['PHP_SELF'], 'm.value', '', '', '', $sortfield, $sortorder, '');
+print getTitleFieldOfList($langs->trans('Qty'), 0, $_SERVER['PHP_SELF'], 'm.value', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('Warehouse'), 0, $_SERVER['PHP_SELF'], 'e.ref', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('LinkedProposal'), 0, $_SERVER['PHP_SELF'], 'pr.ref', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('ThirdParty'), 0, $_SERVER['PHP_SELF'], 's.nom', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('User'), 0, $_SERVER['PHP_SELF'], 'u.login', '', '', '', $sortfield, $sortorder, '');
+print getTitleFieldOfList($langs->trans('SalarieConcerne'), 0, $_SERVER['PHP_SELF'], '', '', '', '', $sortfield, $sortorder, '');
 print getTitleFieldOfList($langs->trans('Note'), 0, $_SERVER['PHP_SELF'], 'm.label', '', '', '', $sortfield, $sortorder, '');
 if ($user->hasRight('stock', 'mouvement', 'creer')) {
 	print '<th></th>';
@@ -245,14 +234,16 @@ print '<tbody>';
 if ($resql) {
 	$num = $db->num_rows($resql);
 	if ($num == 0) {
-		$colspan = $user->hasRight('stock', 'mouvement', 'creer') ? 10 : 9;
+		$colspan = $user->hasRight('stock', 'mouvement', 'creer') ? 11 : 10;
 		print '<tr><td colspan="'.$colspan.'"><span class="opacitymedium">'.$langs->trans('NoMovementsFound').'</span></td></tr>';
 	}
+	$total_sortie = 0;
+	$total_retour = 0;
 	while ($obj = $db->fetch_object($resql)) {
 		print '<tr class="oddeven">';
 
 		// Date
-		print '<td>'.dol_print_date($db->jdate($obj->datem), 'dayhour').'</td>';
+		print '<td>'.dol_print_date($db->jdate($obj->datem), 'day').'</td>';
 
 		// Product
 		print '<td>';
@@ -263,7 +254,12 @@ if ($resql) {
 		print '</td>';
 
 		// Direction badge
-		$qty = (float) $obj->qty;
+		$qty = (float) $obj->value;
+		if ($qty < 0) {
+			$total_sortie += abs($qty);
+		} else {
+			$total_retour += $qty;
+		}
 		if ($qty < 0) {
 			print '<td><span class="badge badge-warning">'.$langs->trans('Sortie').'</span></td>';
 		} else {
@@ -294,15 +290,21 @@ if ($resql) {
 		if (empty($user_display)) { $user_display = $obj->user_login; }
 		print '<td>'.dol_escape_htmltag($user_display).'</td>';
 
+		// Salarié concerné
+		$salarie_display = trim(($obj->salarie_firstname ? $obj->salarie_firstname.' ' : '').$obj->salarie_lastname);
+		if (empty($salarie_display)) { $salarie_display = $obj->salarie_login ?: ''; }
+		print '<td>'.($salarie_display ? dol_escape_htmltag($salarie_display) : '—').'</td>';
+
 		// Label
 		print '<td>'.dol_trunc($obj->label, 50).'</td>';
 
 		// Actions
 		if ($user->hasRight('stock', 'mouvement', 'creer')) {
-			print '<td class="nowrap center">';
-			print '<a class="reposition" href="'.$_SERVER['PHP_SELF'].'?rowid='.$obj->rowid.'&action=delete&token='.newToken()
+			$deleteUrl = $_SERVER['PHP_SELF'].'?rowid='.$obj->rowid.'&action=confirm_delete&token='.newToken()
 				.'&search_propal='.urlencode($search_propal).'&search_product='.urlencode($search_product)
-				.'" title="'.dol_escape_htmltag($langs->trans('DeleteMove')).'">';
+				.'&search_datefrom='.urlencode($search_datefrom).'&search_dateto='.urlencode($search_dateto);
+			print '<td class="nowrap center">';
+			print '<a href="'.$deleteUrl.'" title="'.dol_escape_htmltag($langs->trans('DeleteMove')).'" onclick="return confirm(\''.dol_escape_js($langs->transnoentities('ConfirmDeleteMove')).'\');">';
 			print img_picto('', 'fa-trash-alt');
 			print '</a>';
 			print '</td>';
@@ -312,10 +314,27 @@ if ($resql) {
 	}
 	$db->free($resql);
 } else {
-	$colspan = $user->hasRight('stock', 'mouvement', 'creer') ? 10 : 9;
+	$colspan = $user->hasRight('stock', 'mouvement', 'creer') ? 11 : 10;
 	print '<tr><td colspan="'.$colspan.'">'.dol_print_error($db).'</td></tr>';
 }
 print '</tbody>';
+
+// Total row
+if ($num > 0) {
+	$net = $total_retour - $total_sortie;
+	$colspanTotal = 3; // Date + Product + Direction
+	print '<tr class="liste_titre nodrag nodrop">';
+	print '<td colspan="'.$colspanTotal.'" class="right" style="font-weight:bold;">'.$langs->trans('Total').'</td>';
+	print '<td class="right" style="font-weight:bold;">';
+	print '<span style="color:var(--colorwarning);">-'.price(abs($total_sortie)).'</span>';
+	print ' / <span style="color:var(--colorsuccess);">+'.price($total_retour).'</span>';
+	print ' / <span style="font-weight:bold;">'.($net > 0 ? '+' : '').price($net).'</span>';
+	print '</td>';
+	$colspanRest = $user->hasRight('stock', 'mouvement', 'creer') ? 6 : 5;
+	print '<td colspan="'.$colspanRest.'"></td>';
+	print '</tr>';
+}
+
 print '</table>';
 print '</div>';
 
